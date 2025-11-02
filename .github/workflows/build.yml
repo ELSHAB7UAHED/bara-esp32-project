@@ -3,136 +3,39 @@ name: Build ESP32 Firmware
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
       
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: 3.11
       
-      - name: Install PlatformIO Core
+      - name: Install PlatformIO
         run: |
           python -m pip install --upgrade pip
-          pip install --upgrade platformio
+          pip install platformio
       
       - name: Build Firmware
         run: pio run
       
-      - name: Display Build Info
-        run: |
-          echo "===== Build Output Files ====="
-          ls -lh .pio/build/esp32dev/
+      - name: List Build Files
+        run: ls -lh .pio/build/esp32dev/
       
-      - name: Prepare Firmware Package
+      - name: Prepare Artifacts
         run: |
-          mkdir -p firmware
-          
-          # Copy main firmware
+          mkdir firmware
           cp .pio/build/esp32dev/firmware.bin firmware/
-          
-          # Try to copy bootloader and partitions from build
-          if [ -f .pio/build/esp32dev/bootloader.bin ]; then
-            cp .pio/build/esp32dev/bootloader.bin firmware/
-          fi
-          
-          if [ -f .pio/build/esp32dev/partitions.bin ]; then
-            cp .pio/build/esp32dev/partitions.bin firmware/
-          fi
-          
-          # If not found, get them from PlatformIO packages
-          if [ ! -f firmware/bootloader.bin ]; then
-            find ~/.platformio/packages/framework-arduinoespressif32 -name "bootloader_dio_40m.bin" -exec cp {} firmware/bootloader.bin \; -quit
-          fi
-          
-          if [ ! -f firmware/partitions.bin ]; then
-            find ~/.platformio/packages/framework-arduinoespressif32 -name "default.bin" -path "*/partitions/*" -exec cp {} firmware/partitions.bin \; -quit
-          fi
-          
-          echo "===== Firmware Package Contents ====="
+          if [ -f .pio/build/esp32dev/bootloader.bin ]; then cp .pio/build/esp32dev/bootloader.bin firmware/; fi
+          if [ -f .pio/build/esp32dev/partitions.bin ]; then cp .pio/build/esp32dev/partitions.bin firmware/; fi
           ls -lh firmware/
       
-      - name: Create Flash Scripts
-        run: |
-          # Linux/Mac flash script
-          cat > firmware/flash.sh << 'ENDOFFILE'
-#!/bin/bash
-PORT=${1:-/dev/ttyUSB0}
-echo "Flashing ESP32 on port: $PORT"
-esptool.py --chip esp32 --port $PORT --baud 921600 \
-  --before default_reset --after hard_reset write_flash -z \
-  --flash_mode dio --flash_freq 40m --flash_size detect \
-  0x1000 bootloader.bin \
-  0x8000 partitions.bin \
-  0x10000 firmware.bin
-echo "Done!"
-ENDOFFILE
-          
-          chmod +x firmware/flash.sh
-          
-          # Windows flash script
-          cat > firmware/flash.bat << 'ENDOFFILE'
-@echo off
-set PORT=%1
-if "%PORT%"=="" set PORT=COM3
-echo Flashing ESP32 on port: %PORT%
-esptool.py --chip esp32 --port %PORT% --baud 921600 ^
-  --before default_reset --after hard_reset write_flash -z ^
-  --flash_mode dio --flash_freq 40m --flash_size detect ^
-  0x1000 bootloader.bin ^
-  0x8000 partitions.bin ^
-  0x10000 firmware.bin
-echo Done!
-pause
-ENDOFFILE
-          
-          # Create README
-          cat > firmware/README.md << 'ENDOFFILE'
-# ملفات ESP32 الثنائية
-
-## المحتويات
-- `firmware.bin` - البرنامج الرئيسي (0x10000)
-- `bootloader.bin` - محمل الإقلاع (0x1000)
-- `partitions.bin` - جدول التقسيمات (0x8000)
-- `flash.sh` - سكريبت الرفع Linux/Mac
-- `flash.bat` - سكريبت الرفع Windows
-
-## الاستخدام
-
-### Linux/Mac:
-```bash
-./flash.sh /dev/ttyUSB0
-```
-
-### Windows:
-```cmd
-flash.bat COM3
-```
-
-### يدوياً:
-```bash
-pip install esptool
-esptool.py --chip esp32 --port /dev/ttyUSB0 --baud 921600 \
-  --before default_reset --after hard_reset write_flash -z \
-  --flash_mode dio --flash_freq 40m --flash_size detect \
-  0x1000 bootloader.bin \
-  0x8000 partitions.bin \
-  0x10000 firmware.bin
-```
-ENDOFFILE
-      
-      - name: Upload Firmware Artifacts
-        uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v3
         with:
           name: esp32-firmware
           path: firmware/
-          retention-days: 90
