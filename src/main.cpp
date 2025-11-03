@@ -20,6 +20,7 @@
 #include <ESPAsyncWebServer.h>
 #include <string>
 #include <vector>
+#include "esp_wifi.h"
 
 // Access Point Credentials
 const char* ssidAP = "bara";
@@ -90,7 +91,7 @@ void sendDeauthPackets(const uint8_t* bssid, uint8_t channel, uint16_t count) {
   if (channel != WiFi.channel()) {
     WiFi.disconnect();
     WiFi.mode(WIFI_STA);
-    WiFi.setChannel(channel);
+    esp_wifi_set_channel(channel, WIFI_SECOND_CHAN_NONE);
     delay(10);
   }
 
@@ -285,7 +286,7 @@ void setup() {
 
   // Web Routes
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    request->send_P(200, "text/html", index_html);
+    request->send(200, "text/html", index_html);
   });
 
   server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){

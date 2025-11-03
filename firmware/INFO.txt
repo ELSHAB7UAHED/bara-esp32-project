@@ -1,0 +1,34 @@
+معلومات البناء - bara ESP32 WiFi Scanner
+==========================================
+
+تاريخ البناء: 2025-11-03 11:15:00
+المنصة: ESP32
+إطار العمل: Arduino
+
+ملفات BIN:
+-----------
+1. bootloader.bin - العنوان: 0x1000 (18KB)
+2. partitions.bin - العنوان: 0x8000 (3KB)
+3. firmware.bin   - العنوان: 0x10000 (777KB)
+
+كيفية الفلاش:
+-------------
+Linux/Mac:  ./flash.sh [PORT]
+Windows:    flash.bat [PORT]
+
+أو يدوياً:
+esptool.py --chip esp32 --port [PORT] --baud 921600 write_flash \
+  0x1000 bootloader.bin \
+  0x8000 partitions.bin \
+  0x10000 firmware.bin
+
+ملاحظة: استبدل [PORT] بـ:
+- Linux/Mac: /dev/ttyUSB0 أو /dev/ttyACM0
+- Windows: COM3 أو COM4 (حسب الجهاز)
+
+استخدام الذاكرة:
+-----------------
+RAM:   13.4% (43,880 bytes من 327,680 bytes)
+Flash: 60.2% (788,937 bytes من 1,310,720 bytes)
+
+✅ البناء ناجح!
